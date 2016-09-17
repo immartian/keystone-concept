@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>keystoneSender.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>keystoneSender.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h2 id="sender-part-of-distribution-scheme">Sender part of distribution scheme</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p><strong> This is a quick and dirty attempt to show a scheme of files distribution for musicoin </strong></p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>initial modules are self explanatory</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> express = <span class="hljs-built_in">require</span>(<span class="hljs-string">'express'</span>)
+<span class="hljs-keyword">const</span> fileUpload = <span class="hljs-built_in">require</span>(<span class="hljs-string">'express-fileupload'</span>)
+<span class="hljs-keyword">const</span> stream = <span class="hljs-built_in">require</span>(<span class="hljs-string">'stream'</span>)
+<span class="hljs-keyword">const</span> SizeChunker = <span class="hljs-built_in">require</span>(<span class="hljs-string">'chunking-streams'</span>)
+  .SizeChunker
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>)
+<span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>)
+<span class="hljs-keyword">const</span> crypto2 = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto2'</span>)
+<span class="hljs-keyword">const</span> app = express()
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">'path'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Our main working namespace</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> chnk = {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Load settings from settings module, <code>chnk.settings</code> serves later as a settings provider.</p>
+<p><strong><em>settings.js</em></strong> file serves both input and output apps for convenience.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  settings: <span class="hljs-built_in">require</span>(<span class="hljs-string">'./settings.js'</span>),</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Output data is accumulated in <code>chnk.out</code> object throughout file processing and ultimately packed into result keystone file. Hashes array is initialized to assure it’s existence.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  out: {
+    hashes: []
+  },
+  tmp: {}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>For convenience using middleware provided by <code>express-fileupload</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.use(fileUpload())</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>The interface is served from static files via <code>express</code>‘s static middleware.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.use(express.static(chnk.settings.staticFilesIn))</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Here is the core of actual processing. It files upon call of <code>/upload</code> from the interface.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">'/upload'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Convenience local variables shortcuts</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> sett = chnk.settings,
+      out = chnk.out,
+      tmp = chnk.tmp</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>In case upload transports no files we just gracefully exit and inform the interface.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (!req.files) {
+      res.send(<span class="hljs-string">'No file received!'</span>)
+      <span class="hljs-keyword">return</span>
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>If there is file attached we grab it. The interface sends it as <code>iFile</code>, so we grab the entry with this name.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    tmp.inputFile = req.files.iFile</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Using function provided by <code>express-fileupload</code> (<code>mv</code>) we process the file</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    tmp.inputFile.mv(sett.inputFilesDir + path.sep + tmp.inputFile.name, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err</span>) </span>{
+      <span class="hljs-keyword">if</span> (err) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Obviously we report errors to the interface</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        res.status(<span class="hljs-number">500</span>)
+          .send(err)
+      } <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>If there is no error we start by setting up our environment
+We start by setting <code>out.chunkKey</code> - it’s the key used later to initiate a symmetric encryption of chunks. Its lenght depends on used encryption algorithm.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        out.chunkKey = crypto.randomBytes(sett.chunkKeyLen)
+          .toString(<span class="hljs-string">'hex'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>We store a file name of the input file to later export with the keystone file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        out.origFileName = tmp.inputFile.name</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>As the file is already saved by the middleware we must read it at this point (<em>this could be done otherwise, but rewriting this middleware makes no sense for presentation purposes only</em>).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.inputFileStream = fs.createReadStream(sett.inputFilesDir + path.sep + tmp.inputFile.name)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>We use also a convenience module to split the file into chunks (<em>again, it could be done otherwise, for instance by making own transform stream, but makes no sense in this case</em>).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.chunker = <span class="hljs-keyword">new</span> SizeChunker({</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>The chunk size is set here to 4MB. For music and small media files it’s good tradeoff between the storage size and transport speed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            chunkSize: <span class="hljs-number">4194304</span>,
+            flushTail: <span class="hljs-literal">true</span>
+          })</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>We run the chunker by feeding it from <code>tmp.inputFileStream</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.inputFileStream.pipe(tmp.chunker)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>The <code>SizeChunker</code> we use, provides standard stream events together with two custom ones. The first - <code>chunkStart</code> - is fired when a new (or first) chunk is being processed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.chunker.on(<span class="hljs-string">'chunkStart'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id, done</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>First we set up some temporary tool vars
+As every chunk is ultimately written in a file we create a writable stream <code>tmp.chunkOutput</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkOutput = fs.createWriteStream(path.join(sett.chunksDir + path.sep + sett.chunksFilePrefx) + id)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>We want to know hashes of each chunk to write them later into keystone file. We must setup a hash (<code>tmp.chunkHash</code>). Hash uses algorithm defined in settings file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkHash = crypto.createHash(sett.chunkHashAlg)
+          tmp.chunkHash.setEncoding(<span class="hljs-string">'hex'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>We want every chunk to be encrypted, but using the same key in all cases. So we set up a cipher (<code>tmp.chunkCipher</code>) to be used in encryption of a chunk</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkCipher = crypto.createCipher(sett.chunkCipher, out.chunkKey)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>We need a tool readable stream as chunker returns Buffer. So we set up a readable stream (<code>tmp.chunkStrRead</code>) and define its read function (it must be done this way, as well as pushing null at the end).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkStrRead = <span class="hljs-keyword">new</span> stream.Readable()
+          tmp.chunkStrRead._read = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">noop</span>(<span class="hljs-params"></span>) </span>{}
+          done();
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>The <code>data</code> event fires on each data processing in a stream. It returns a <code>chunk</code> object containing id and data members.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.chunker.on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">chunk</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>Here we update the hash of a chunk.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkHash.update(chunk.data)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>And here we push data to the temporary readable stream.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkStrRead.push(chunk.data)
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Another event provided by <code>SizeChunker</code> is <code>chunkEnd</code>. As the name implies it fires upon closing of a chunk.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.chunker.on(<span class="hljs-string">'chunkEnd'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id, done</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>Here we null-terminate data in temporary readable stream.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkStrRead.push(<span class="hljs-literal">null</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Now we pipe the above stream through encryption and save it to a file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.chunkStrRead.pipe(tmp.chunkCipher)
+            .pipe(tmp.chunkOutput)
+          tmp.chunkOutput.end()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>As by now the hash should be ready we transform it into hex to be human readable.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          <span class="hljs-keyword">let</span> hashResult = tmp.chunkHash.digest()
+            .toString(<span class="hljs-string">'hex'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>Here we rename output chunk’s file to a name containing the hash.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          fs.rename(path.join(sett.chunksDir + path.sep + sett.chunksFilePrefx) + id, path.join(sett.chunksDir + path.sep + sett.chunksFilePrefx) + hashResult + sett.chunksExtension)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>Lastly we store the hash in a container that will later be incorporated into the keystone file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          out.hashes.push(hashResult)
+          done()
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>Last event - <code>end</code> - is fired after the <code>SizeChunker</code> finished its job. We do a lot here, as we must now get all the data together and push it into a resulting keystone file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        tmp.chunker.on(<span class="hljs-string">'end'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>We set up the key <code>tmp.envelopeKey</code> to a symmetric cipher that will be used to seal a package with data collected so far. We call it ‘envelopeKey’ just to intorduce some mess.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.envelopeKey = crypto.randomBytes(sett.keystoneKeyLen)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>Then we set up a cipher itself</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.keystoneEncryptor = crypto.createCipher(sett.keystoneCipher, tmp.envelopeKey)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>Now we push our data store with hashes through <code>tmp.keystoneEncryptor</code> and then to Buffer <code>tmp.encBufData</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.bufData = Buffer.from(<span class="hljs-built_in">JSON</span>.stringify(chnk.out))
+          tmp.encBufData = tmp.keystoneEncryptor.update(tmp.bufData, <span class="hljs-string">''</span>, <span class="hljs-string">'hex'</span>)
+          tmp.encBufData += tmp.keystoneEncryptor.final(<span class="hljs-string">'hex'</span>)
+          tmp.encBufData = Buffer.from(tmp.encBufData, <span class="hljs-string">'hex'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>We set up <code>tmp.headerBuf</code> that will hold length of the data.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          tmp.headerBuf = Buffer.allocUnsafe(<span class="hljs-number">4</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>Here we use a <code>crypto2</code> convenience module to encrypt the envelopeKey with publicKey.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          crypto2.encrypt.rsa(tmp.envelopeKey.toString(<span class="hljs-string">'hex'</span>), sett.publicKey, (err, encrypted) =&gt; {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-41">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
+              </div>
+              <p>We gracefully manage errors if any.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (err) {
+              res.send(<span class="hljs-string">'Error occured while encrypting the envelope.\n'</span> + err)
+              <span class="hljs-keyword">return</span>
+            }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-42">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-42">&#182;</a>
+              </div>
+              <p>If everything is OK, we measure and assign to buffer a length in bytes of the encrypted with symmetric cipher data.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            tmp.headerBuf.writeInt32LE(Buffer.byteLength(tmp.encBufData))</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-43">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-43">&#182;</a>
+              </div>
+              <p>Then we glue all data together, starting from length buffer, then encrypted data and finally RSA encrypted key to the data.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            tmp.resultBuf = Buffer.concat([tmp.headerBuf, tmp.encBufData, <span class="hljs-keyword">new</span> Buffer(encrypted, <span class="hljs-string">'base64'</span>)])</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-44">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+              <p>We write resulting buffer to the keystone file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            tmp.tmpOutStr = fs.createWriteStream(sett.keystonesDir + path.sep + sett.keystoneFname)
+            tmp.tmpOutStr.write(tmp.resultBuf)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-45">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-45">&#182;</a>
+              </div>
+              <p>Finally we send response to the interface with hex encoded result buffer. Because why not. And we clean up few things.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            res.send(tmp.resultBuf.toString(<span class="hljs-string">'hex'</span>))
+            tmp.tmpOutStr.end()
+            fs.unlink(sett.inputFilesDir + path.sep + tmp.inputFile.name)
+          })
+        })
+      }
+    })
+  })</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-46">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-46">&#182;</a>
+              </div>
+              <p>We set here our app to listen on a port of our choice</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.listen(chnk.settings.outPortIn)</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

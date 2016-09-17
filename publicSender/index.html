@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Musicoin upload file</title>
+<link rel="stylesheet" type="text/css" media="all" href="styles.css" />
+<link href="https://fonts.googleapis.com/css?family=Oswald:400,700|Roboto:300,400,700" rel="stylesheet">
+</head>
+<body>
+
+<form id="upload">
+
+<fieldset>
+<legend>Upload the file</legend>
+
+<div>
+	<div id="overlay" data-ovron="false">
+
+	</div>
+		<label class="fileselector" for="fileselect">Select files to upload</label>
+		<input type="file" id="fileselect" name="iFile" class="hiddenfileinput" />
+		<div id="draghere">drop file here or use selection above</div>
+</div>
+
+</fieldset>
+
+</form>
+<h2>Below there will appear a hexadecimal representation of a keystone file generated from the original file. It will contain data that enables reconstruction of a file from fragments distributed in P2P network. See README.md for details</h2>
+<div id="messages">
+</div>
+<script src="script.js"></script>
+</body>
+</html>

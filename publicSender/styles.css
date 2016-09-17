@@ -1,0 +1,146 @@
+body
+{
+	font-family: "Roboto";
+	font-size: 90%;
+	margin: 1vw;
+	color: #333;
+	background-color: #fff;
+}
+
+h1, h2
+{
+	font-size: 1.5em;
+	font-weight: normal;
+}
+
+h2
+{
+	font-size: 0.8em;
+	text-align:center;
+	border-bottom:1px solid #aaa;
+	padding: 0.2em 4vw;
+	margin:1em 0;
+}
+
+legend
+{
+	font-weight: bold;
+	color: #333;
+}
+form {
+	position:relative;
+	overlay:hidden;
+}
+#overlay {
+	position:absolute;
+	top:0;
+	left:0;
+	right:0;
+	bottom:0;
+	text-align:center;
+	font-size:1.2em;
+	padding:2vh 2vw;
+	color: #da801f;
+	transform: translate(-200%,0);
+}
+#overlay[data-ovron="done"],#overlay[data-ovron="upload"] {
+	transform: translate(0,0);
+	background-color: rgba(255, 255, 255, 0.85);
+}
+
+#draghere
+{
+	display: block;
+	font-weight: bold;
+	text-align: center;
+	padding: 3em 0;
+	margin: 1em 0;
+	color: #555;
+	border: 2px dashed #555;
+	border-radius: 7px;
+	cursor: default;
+}
+
+#draghere.hover
+{
+	color: #f00;
+	border-color: #f00;
+	border-style: solid;
+	box-shadow: inset 0 3px 4px #888;
+}
+#draghere:hover
+{
+	color: #000;
+	border-color: #777;
+	border-style: solid;
+	box-shadow: inset 0 3px 4px #888;
+}
+
+img
+{
+	max-width: 100%;
+}
+
+pre
+{
+	width: 95%;
+	height: 8em;
+	font-family: monospace;
+	font-size: 0.9em;
+	padding: 1px 2px;
+	margin: 0 0 1em auto;
+	border: 1px inset #666;
+	background-color: #eee;
+	overflow: auto;
+}
+
+#messages
+{
+	padding: 0 1em;
+	min-height:2em;
+}
+
+
+@keyframes vanish {
+  0% {
+	opacity:1;
+	}
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    /* opacity: 0; */
+  }
+}
+
+#messages p {
+	font-size:large;
+	font-family:monospace;
+    word-break: break-all;
+    white-space: normal;
+}
+
+#messages p.vanish {
+	animation:vanish 2s;
+	animation-fill-mode: forwards;
+}
+.fileselector {
+	display:block;
+	width:100%;
+	height:2em;
+	line-height:2.1em;
+	text-align: center;
+	font-size: 1.4em;
+	background-color: cadetblue;
+	color: #fff;
+	border-radius: 0.3em;
+	box-shadow: 0 0 3px 0 #000,inset 0 0 0 1px white;
+}
+.fileselector:hover {
+	background-color: #2eb5b9;
+	box-shadow: 0 0 5px 0 #000,0 0 5px 0 #000,inset 0 0 0 1px white;
+	
+}
+#fileselect {
+	display:none;
+}

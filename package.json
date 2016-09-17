@@ -1,0 +1,19 @@
+{
+  "name": "musicoin-chunking",
+  "version": "0.1.0",
+  "description": "",
+  "main": "keystoneSender.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hibryda",
+  "dependencies": {
+    "chokidar": "latest",
+    "chunking-streams": "latest",
+    "crypto2": "latest",
+    "express": "latest",
+    "express-fileupload": "latest",
+    "express-ws": "latest"
+  },
+  "license": "HOL"
+}
