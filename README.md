@@ -2,6 +2,7 @@
 This little app is meant to present a concept for Musicoin's data distribution model. The model consists of **Sender** and **Receiver** sides.
 
 **Sender** side (possibly contract or an app using contract's api) takes a media file and performs following operations:
+
 1. splits the file into chunks;
 2. calculates hashes of chunks (MD5, SHA, XX...);
 3. symmetrically (AES for instance) encrypts chunks with the same, created ad hoc, encryption key (*keyA*);
@@ -15,6 +16,7 @@ This little app is meant to present a concept for Musicoin's data distribution m
 11. sends this file to receiver.
 
 **Receiver** side, upon receiving the keystone file, performs the following operations:
+
 1. decodes the length of data block;
 2. extracts data block and encrypted key according to length decoded;
 3. decrypts the *keyB* with own private key;
@@ -44,10 +46,12 @@ Then satisfy dependancies with npm: `npm install`
 
 Then you can edit `settings.js` file to adjust settings (directories, ports, etc).
 
+*remember to create empty directories mentioned in settings, not wanted to bloat the repo with them*
+
 Then, by running `keystoneSender.js` and opening it's web interface (default: localhost:9999) you'll have an option to pick a file, chunk it and produce the keystone file. As there is no network storage attached in this presentation, files are stored into respective directories set up in settings (IPFS binding can be added in the future for further tests).
 
 After having keystone and chunks head to `keystoneReceiver.js`, run it and open its interface (default: localhost:19999). It should detect presence of the keystone file created earlier and ask for action (decode). Upon decoding it shows contents of keystone file and asks for further action (fetching and verification of chunks). If chunks are fetched and verified, the last action is to reconstruct the original. After reconstruction the file can be downloaded (or found in respective folder).
 
-The code is documented **not all yet** - docs can be found in `doc` folder in html form (docco).
+The code is documented (**not all yet**) - docs can be found in `doc` folder in html form (docco).
 
 Enjoy.
